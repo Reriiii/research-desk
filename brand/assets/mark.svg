@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">Research Desk mark</title>
+  <desc id="desc">Three evidence paths converge into a geometric letter R.</desc>
+  <rect width="256" height="256" rx="44" fill="#0B1220"/>
+  <path d="M72 62h38c28 0 48 18 48 43s-20 43-48 43H72V62Z" fill="none" stroke="#F4F1E8" stroke-width="14" stroke-linejoin="round"/>
+  <path d="M118 148l56 52" fill="none" stroke="#F4F1E8" stroke-width="14" stroke-linecap="square"/>
+  <path d="M50 181h30l34-33M50 128h49M50 75h30l28 16" fill="none" stroke="#45C7E8" stroke-width="10" stroke-linecap="square" stroke-linejoin="miter"/>
+  <circle cx="50" cy="75" r="9" fill="#72E0B8"/>
+  <circle cx="50" cy="128" r="9" fill="#72E0B8"/>
+  <circle cx="50" cy="181" r="9" fill="#72E0B8"/>
+</svg>

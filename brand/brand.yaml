@@ -1,0 +1,28 @@
+schema_version: 1
+slug: research-desk
+name: Research Desk
+one_liner: An evidence-led research agent that plans, searches, evaluates, and writes sourced reports.
+tagline: Research with a visible method.
+archetype: Sage
+status: active
+stage: early
+industry: AI developer tools
+languages: [en]
+links:
+  domain: ""
+  repo: https://github.com/Reriiii/langgraph-research-agent
+created: 2026-09-21
+updated: 2026-09-21
+version: 1
+artifacts:
+  context: true
+  naming: false
+  strategy: false
+  architecture: false
+  identity: true
+  voice: false
+  messaging: false
+  positioning: false
+  story: false
+  guidelines: false
+  audit: false

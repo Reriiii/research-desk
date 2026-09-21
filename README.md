@@ -1,62 +1,50 @@
-# LangGraph Research Agent
+<div align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="./brand/assets/logo-dark.svg">
+    <source media="(prefers-color-scheme: light)" srcset="./brand/assets/logo-light.svg">
+    <img alt="Research Desk" src="./brand/assets/logo-light.svg" width="640">
+  </picture>
 
-Research agent đa bước xây dựng bằng LangGraph, OpenAI và Tavily. Agent tự lập
-kế hoạch, dùng vòng lặp ReAct để tìm kiếm và quan sát bằng chứng, đánh giá độ
-đầy đủ, bổ sung phần còn thiếu và tạo báo cáo Markdown có nguồn tham khảo.
+  <p><strong>Research with a visible method.</strong></p>
+  <p>A bounded, observable research agent that turns a question into a sourced report.</p>
 
-## Điểm nổi bật
+  <p>
+    <img alt="Python 3.12+" src="https://img.shields.io/badge/Python-3.12%2B-0B1220?style=flat-square&logo=python&logoColor=45C7E8">
+    <img alt="LangGraph" src="https://img.shields.io/badge/Orchestration-LangGraph-0B1220?style=flat-square">
+    <img alt="Tests: 15 passing" src="https://img.shields.io/badge/tests-15%20passing-72E0B8?style=flat-square&labelColor=0B1220">
+  </p>
 
-- Lập kế hoạch nghiên cứu có cấu trúc gồm 3–6 bước.
-- ReAct loop rõ ràng: Reason → Act (`web_search`) → Observe (`ToolMessage`).
-- Thu thập bằng chứng web qua Tavily và giữ lại source URL.
-- Đánh giá coverage trước khi viết báo cáo cuối.
-- Tự nghiên cứu bổ sung tối đa 2 lần khi evidence chưa đủ.
-- Giới hạn tối đa 5 vòng gọi tool cho mỗi bước để tránh loop vô hạn.
-- Ba cách sử dụng: Textual TUI, FastAPI REST API và CLI.
-- Correlation bằng `run_id` xuyên suốt state, log, API và AgentOps.
-- Theo dõi OpenAI request ID, token usage, latency và stack trace.
+  <p>
+    <a href="#quick-start">Quick start</a> ·
+    <a href="#how-it-works">How it works</a> ·
+    <a href="#interfaces">Interfaces</a> ·
+    <a href="./architecture.html">Architecture viewer</a>
+  </p>
+</div>
 
-## Kiến trúc
+---
 
-[![LangGraph Research Agent architecture](./architecture.visual-check.1440x900.light.png)](./architecture.html)
+Research Desk is an open-source LangGraph reference implementation for evidence-led research. It creates a plan, runs a bounded ReAct loop against web search, evaluates the collected evidence, fills material gaps, and writes a Markdown report from the evidence it actually found.
 
-- [Mở architecture viewer tương tác](./architecture.html)
-- [Xem JSON specification](./architecture.json)
+The method stays inspectable: every run carries one correlation ID through graph state, local logs, API responses, and optional AgentOps traces.
 
-Luồng chính:
+## Why Research Desk
 
-```text
-User → TUI / REST / CLI → Planner → ReAct Research Loop → Evaluator → Writer
-                                      ├── OpenAI reasoning
-                                      ├── Tavily action
-                                      └── ToolMessage observation
-```
+| Capability | What it provides |
+|---|---|
+| **Visible planning** | Breaks each request into 3-6 concrete research steps before searching. |
+| **Bounded ReAct** | Repeats Reason → Act → Observe with a five-action ceiling per step. |
+| **Evidence capture** | Preserves useful source URLs from Tavily observations. |
+| **Quality loop** | Evaluates coverage and can schedule up to two follow-up passes. |
+| **Grounded writing** | Instructs the writer to use only collected evidence and expose uncertainty. |
+| **Run observability** | Records node timing, tool activity, model metadata, token usage, and failures. |
+| **Three interfaces** | Ships with a branded Textual TUI, FastAPI endpoint, and CLI example. |
 
-Sơ đồ và viewer controls sử dụng English để thuận tiện chia sẻ trong tài liệu
-kỹ thuật và repository công khai.
+## Quick Start
 
-## Quy trình agent
+### 1. Install
 
-1. `planner` chuyển câu hỏi thành 3–6 research steps.
-2. `react_agent` reasoning nội bộ để xác định evidence còn thiếu.
-3. Khi cần hành động, model phát tool call và node `act` gọi `web_search`.
-4. Kết quả được đưa về dưới dạng `ToolMessage` để model Observe và lặp lại.
-5. Khi đủ evidence, `save_research` lưu note và chuyển sang bước tiếp theo.
-6. `evaluator` kiểm tra độ đầy đủ; `retry_planner` tạo bước bổ sung nếu cần.
-7. `writer` tổng hợp báo cáo cuối chỉ từ evidence đã thu thập.
-
-ReAct reasoning không được xuất ra dưới dạng chain-of-thought. Agent chỉ trả về
-kết luận, evidence và source URL; phần reasoning riêng tư vẫn nằm trong model.
-
-## Yêu cầu
-
-- Python 3.12+
-- [uv](https://docs.astral.sh/uv/)
-- OpenAI API key
-- Tavily API key
-- AgentOps API key nếu muốn remote tracing
-
-## Cài đặt
+Requirements: Python 3.12+, [`uv`](https://docs.astral.sh/uv/), an OpenAI API key, and a Tavily API key.
 
 ```powershell
 git clone https://github.com/Reriiii/langgraph-research-agent.git
@@ -65,7 +53,7 @@ uv sync --frozen
 Copy-Item .env.example .env
 ```
 
-Cấu hình `.env`:
+### 2. Configure
 
 ```dotenv
 MODEL=gpt-5-mini
@@ -75,55 +63,89 @@ AGENTOPS_API_KEY=your-agentops-api-key
 LOG_LEVEL=INFO
 ```
 
-| Biến | Bắt buộc | Mục đích |
-|---|---:|---|
-| `MODEL` | Có | OpenAI model dùng cho planner, ReAct agent, evaluator và writer |
-| `OPENAI_API_KEY` | Có | Xác thực OpenAI API |
-| `TAVILY_API_KEY` | Có | Web search cho evidence bên ngoài |
-| `AGENTOPS_API_KEY` | Không | Trace replay và LLM spans trên AgentOps |
-| `OPENAI_PROJECT` | Không | Chọn rõ OpenAI project để đối chiếu usage |
-| `LOG_LEVEL` | Không | Mức log; mặc định `INFO` |
+`AGENTOPS_API_KEY` is optional. The agent continues to log locally when remote tracing is disabled.
 
-Không commit `.env` hoặc API key vào repository.
-
-## Chạy TUI
+### 3. Run the desk
 
 ```powershell
 uv run python tui.py
 ```
 
-Nhập câu hỏi rồi nhấn `Enter` hoặc chọn **Research**.
-
-| Phím tắt | Chức năng |
-|---|---|
-| `Enter` | Bắt đầu research |
-| `Ctrl+F` | Focus ô nhập câu hỏi |
-| `Ctrl+K` | Xóa kết quả hiện tại |
-| `Ctrl+Q` | Thoát TUI |
-
-Ví dụ prompt:
+Enter a focused research brief, then press `Enter` or select **Start run**.
 
 ```text
-What are the three main benefits of solar energy? Use reliable sources and include URLs.
+Compare the current approaches to agent memory. Prefer primary sources,
+separate established findings from open questions, and include source URLs.
 ```
 
-## Chạy REST API
+## How It Works
+
+```text
+Question
+   │
+   ▼
+Planner ──► ReAct Research Loop ──► Evaluator ──► Writer ──► Sourced report
+               │      ▲                 │
+               │      │                 └── insufficient ──► follow-up plan
+               ▼      │
+          Tavily action
+               │
+               └── ToolMessage observation
+```
+
+1. **Plan**: `planner` converts the question into three to six ordered research steps.
+2. **Reason**: `react_agent` privately determines what evidence the current step still needs.
+3. **Act**: the model calls `web_search`; the `act` node executes the Tavily request.
+4. **Observe**: results return as `ToolMessage` observations for the next ReAct iteration.
+5. **Record**: `save_research` stores the evidence note and advances the plan.
+6. **Evaluate**: `evaluator` checks coverage and requests follow-up research when needed.
+7. **Write**: `writer` produces the final report from collected evidence only.
+
+The agent never returns private chain-of-thought. It exposes conclusions, evidence, sources, state transitions, and operational metadata instead.
+
+<p align="center">
+  <a href="./architecture.html">
+    <img alt="Research Desk architecture" src="./architecture.visual-check.1440x900.light.png" width="900">
+  </a>
+</p>
+
+<p align="center">
+  <a href="./architecture.html">Explore the interactive architecture</a> ·
+  <a href="./architecture.json">Inspect the source specification</a>
+</p>
+
+## Interfaces
+
+### Terminal UI
+
+```powershell
+uv run python tui.py
+```
+
+The TUI separates the run ledger from the report canvas and streams graph updates as each node completes.
+
+| Shortcut | Action |
+|---|---|
+| `Enter` | Start research from the question field |
+| `Ctrl+F` | Focus the question field |
+| `Ctrl+K` | Clear the current desk |
+| `Ctrl+Q` | Exit |
+
+### REST API
 
 ```powershell
 uv run python main.py
 ```
 
-Sau khi server khởi động:
-
-- Swagger UI: <http://127.0.0.1:8000/docs>
-- Health check: <http://127.0.0.1:8000/health>
-- Research endpoint: `POST /research`
-
-Ví dụ request:
+| Route | Purpose |
+|---|---|
+| `GET /` | Redirect to Swagger UI |
+| `GET /health` | Process health check |
+| `POST /research` | Run the complete research graph |
 
 ```powershell
 $body = @{
-    query = "What are the three main benefits of solar energy? Use reliable sources."
+    query = "What are the strongest current approaches to agent evaluation?"
 } | ConvertTo-Json
 
 Invoke-RestMethod `
@@ -132,8 +154,6 @@ Invoke-RestMethod `
     -ContentType "application/json" `
     -Body $body
 ```
-
-Response:
 
 ```json
 {
@@ -144,87 +164,94 @@ Response:
 }
 ```
 
-## Chạy CLI mẫu
+Swagger UI is available at <http://127.0.0.1:8000/docs>.
+
+### CLI Example
 
 ```powershell
 uv run python run.py
 ```
 
-Query mẫu hiện được khai báo trong `run.py`.
+The sample query is defined in `run.py`; use the TUI or API for arbitrary input.
+
+## Configuration
+
+| Variable | Required | Role |
+|---|---:|---|
+| `MODEL` | Yes | OpenAI model used by planner, ReAct agent, evaluator, and writer |
+| `OPENAI_API_KEY` | Yes | OpenAI authentication |
+| `TAVILY_API_KEY` | Yes | External evidence search |
+| `AGENTOPS_API_KEY` | No | Remote trace capture and replay |
+| `OPENAI_PROJECT` | No | Explicit OpenAI project attribution |
+| `LOG_LEVEL` | No | Local log level; defaults to `INFO` |
+
+Never commit `.env` or API credentials. The repository already excludes `.env` from Git.
 
 ## Observability
 
-### Local logs
+Every run receives a 12-character `run_id`. Use it to correlate the API response with graph nodes, model requests, tool calls, latency, token usage, and stack traces.
 
-Ứng dụng ghi rotating log vào `logs/research-agent.log`. Mỗi entry chứa
-`run_id` và có thể bao gồm node, latency, OpenAI request ID, model thực tế,
-token usage, tool call và stack trace.
-
-Theo dõi realtime bằng PowerShell:
+Local logs rotate at 5 MB and retain three backups:
 
 ```powershell
 Get-Content .\logs\research-agent.log -Wait
 ```
 
-Lọc một run cụ thể:
+Filter one run:
 
 ```powershell
 Select-String -Path .\logs\research-agent.log -Pattern "run_id=a1b2c3d4e5f6"
 ```
 
-Log file xoay vòng ở 5 MB và giữ tối đa 3 bản cũ.
+When `AGENTOPS_API_KEY` is present, each TUI, API, or CLI run is also wrapped in a `research-agent` trace. AgentOps provides trace replay and operational visibility; it is not a substitute for a dedicated correctness or faithfulness evaluation suite.
 
-### AgentOps
+## Guardrails
 
-Khi `AGENTOPS_API_KEY` tồn tại, mỗi lần chạy được gửi thành một trace
-`research-agent` riêng, gắn tag `run_id` và nguồn gọi `tui`, `api` hoặc `cli`.
-Dashboard URL được ghi trong local log dưới event `agentops_trace_started`.
+- ReAct tool use is capped at five iterations per research step.
+- Follow-up research is capped at two evaluator-requested passes.
+- Tool failures return structured error observations instead of terminating the graph immediately.
+- Search results are treated as untrusted evidence, never as instructions.
+- The writer is constrained to collected evidence and must state material uncertainty.
+- Query previews and trace metadata may be logged; do not submit secrets.
 
-AgentOps được dùng cho tracing, latency, token/cost visibility và replay. Các
-quality evaluation định lượng như correctness, faithfulness hoặc regression
-threshold nên được triển khai thêm bằng một eval framework chuyên dụng.
+## Development
 
-## Kiểm thử
-
-Test suite mock toàn bộ OpenAI, Tavily và AgentOps; chạy test không phát sinh
-request hoặc chi phí external API.
+The test suite mocks OpenAI, Tavily, and AgentOps, so it creates no external requests or usage costs.
 
 ```powershell
 uv run python -m unittest discover -v
-```
-
-Kiểm tra compile:
-
-```powershell
 uv run python -m compileall -q app main.py run.py tui.py tests
+git diff --check
 ```
 
-## Cấu trúc project
+## Project Map
 
 ```text
 .
 ├── app/
 │   ├── agents/          # Planner, ReAct loop, evaluator, retry, writer
-│   ├── api/             # FastAPI request/response routes
-│   ├── graph/           # AgentState và LangGraph topology
+│   ├── api/             # FastAPI request and response routes
+│   ├── graph/           # AgentState and LangGraph topology
 │   ├── tools/           # Tavily web search tool
 │   ├── logging_config.py
-│   ├── observability.py # AgentOps initialization và trace lifecycle
+│   ├── observability.py # AgentOps trace lifecycle
 │   ├── main.py          # FastAPI application
 │   └── tui.py           # Textual application
-├── tests/               # Unit, graph, API, TUI và observability tests
+├── brand/               # Brand context, identity brief, tokens, and logo assets
+├── tests/               # Graph, API, TUI, logging, and observability tests
 ├── architecture.html    # Interactive architecture viewer
-├── architecture.json    # Archify source specification
+├── architecture.json    # Architecture source specification
 ├── main.py              # API entrypoint
 ├── tui.py               # TUI entrypoint
 └── run.py               # CLI example
 ```
 
-## Lưu ý vận hành
+## Brand Assets
 
-- Một full research run có thể thực hiện nhiều OpenAI và Tavily requests.
-- Theo dõi token usage và latency bằng local log hoặc AgentOps trước khi chạy
-  workload lớn.
-- Không đưa nội dung bí mật vào query vì query preview và trace metadata có thể
-  được ghi phục vụ debugging.
-- AgentOps là optional; nếu thiếu key, workflow vẫn chạy với local logging.
+The visual system is documented in [`brand/identity.md`](./brand/identity.md), with reusable tokens in [`brand/tokens.yaml`](./brand/tokens.yaml). Adaptive wordmarks and the standalone mark live in [`brand/assets/`](./brand/assets/).
+
+---
+
+<div align="center">
+  <sub>Research Desk · evidence over assertion · visible process · bounded autonomy</sub>
+</div>

@@ -9,7 +9,11 @@ configure_logging(console=True)
 logger = get_logger("server")
 
 
-app = FastAPI(title="LangGraph Research Agent")
+app = FastAPI(
+    title="Research Desk API",
+    description="Evidence-led research through a bounded, observable LangGraph workflow.",
+    version="0.1.0",
+)
 app.include_router(router)
 
 

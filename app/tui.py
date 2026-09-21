@@ -35,7 +35,7 @@ NODE_STATUS = {
 
 class ResearchTUI(App[None]):
     TITLE = "Research Desk"
-    SUB_TITLE = "LangGraph research agent"
+    SUB_TITLE = "Evidence-led research agent"
     BINDINGS = [
         ("ctrl+q", "quit", "Quit"),
         ("ctrl+k", "clear", "Clear"),
@@ -43,24 +43,40 @@ class ResearchTUI(App[None]):
     ]
 
     CSS = """
+    $archive_ink: #0b1220;
+    $deep_ink: #101b2d;
+    $signal_cyan: #45c7e8;
+    $evidence_mint: #72e0b8;
+    $paper: #f4f1e8;
+    $slate: #8ea0b8;
+    $quiet_slate: #60738d;
+
     Screen {
-        background: #07111f;
-        color: #d9e7f5;
+        background: $archive_ink;
+        color: $paper;
     }
 
     Header {
-        background: #0d2138;
-        color: #eff8ff;
+        background: $archive_ink;
+        color: $slate;
     }
 
     #shell {
-        padding: 1 2;
+        padding: 1 3;
     }
 
     #hero {
-        height: 3;
+        height: 4;
         margin-bottom: 1;
-        color: #86d9ff;
+        padding-left: 1;
+        border-left: thick $signal_cyan;
+        color: $paper;
+        text-style: bold;
+    }
+
+    #query-label {
+        height: 1;
+        color: $slate;
         text-style: bold;
     }
 
@@ -71,20 +87,25 @@ class ResearchTUI(App[None]):
 
     #query {
         width: 1fr;
-        border: tall #24577a;
-        background: #0a192a;
+        border: tall $quiet_slate;
+        background: $deep_ink;
+        color: $paper;
     }
 
     #query:focus {
-        border: tall #45c4ed;
+        border: tall $signal_cyan;
     }
 
     #run {
         width: 16;
         margin-left: 1;
-        background: #0e7490;
-        color: white;
+        background: $signal_cyan;
+        color: $archive_ink;
         text-style: bold;
+    }
+
+    #run:hover {
+        background: $evidence_mint;
     }
 
     #workspace {
@@ -92,36 +113,37 @@ class ResearchTUI(App[None]):
     }
 
     .panel {
-        border: round #24577a;
-        background: #0a192a;
+        border: round $quiet_slate;
+        background: $deep_ink;
         padding: 1 2;
     }
 
     #progress-panel {
-        width: 38;
+        width: 40;
         margin-right: 1;
     }
 
     #report-panel {
         width: 1fr;
+        border: round $signal_cyan;
     }
 
     .panel-title {
         height: 2;
-        color: #67e8c8;
+        color: $evidence_mint;
         text-style: bold;
     }
 
     #status {
         min-height: 2;
         margin-bottom: 1;
-        color: #b8cbe0;
+        color: $slate;
     }
 
     #spinner {
         height: 1;
         margin-bottom: 1;
-        color: #45c4ed;
+        color: $signal_cyan;
         display: none;
     }
 
@@ -133,11 +155,12 @@ class ResearchTUI(App[None]):
     #hint {
         height: 2;
         padding-top: 1;
-        color: #718ba5;
+        color: $quiet_slate;
     }
 
     Footer {
-        background: #0d2138;
+        background: $archive_ink;
+        color: $slate;
     }
     """
 
@@ -145,29 +168,31 @@ class ResearchTUI(App[None]):
         yield Header(show_clock=True)
         with Vertical(id="shell"):
             yield Static(
-                "RESEARCH DESK\nAsk a question, then follow each stage of the agent.",
+                "RESEARCH DESK  /  EVIDENCE-LED AGENT\n"
+                "Research with a visible method: plan, act, observe, evaluate, report.",
                 id="hero",
             )
+            yield Static("QUESTION / RESEARCH BRIEF", id="query-label")
             with Horizontal(id="query-row"):
                 yield Input(
-                    placeholder="What do you want to research?",
+                    placeholder="State the question, scope, and evidence standard...",
                     id="query",
                 )
-                yield Button("Research", id="run", variant="primary")
+                yield Button("Start run", id="run", variant="primary")
             with Horizontal(id="workspace"):
                 with Vertical(id="progress-panel", classes="panel"):
-                    yield Static("PROGRESS", classes="panel-title")
-                    yield Static("Ready for a research question.", id="status")
+                    yield Static("01 / RUN LEDGER", classes="panel-title")
+                    yield Static("Desk ready. No active run.", id="status")
                     yield LoadingIndicator(id="spinner")
-                    yield Markdown("_The research plan will appear here._", id="plan")
+                    yield Markdown("_The research plan will be logged here._", id="plan")
                 with Vertical(id="report-panel", classes="panel"):
-                    yield Static("REPORT", classes="panel-title")
+                    yield Static("02 / RESEARCH REPORT", classes="panel-title")
                     yield Markdown(
-                        "# Ready\n\nEnter a question above to start a research run.",
+                        "# Desk ready\n\nEnter a research brief to begin an evidence-led run.",
                         id="report",
                     )
             yield Static(
-                f"Detailed diagnostics: {LOG_FILE}",
+                f"TRACE / {LOG_FILE}",
                 id="hint",
             )
         yield Footer()
@@ -214,7 +239,7 @@ class ResearchTUI(App[None]):
         self.query_one("#query", Input).disabled = busy
         button = self.query_one("#run", Button)
         button.disabled = busy
-        button.label = "Running..." if busy else "Research"
+        button.label = "Researching..." if busy else "Start run"
         self.query_one("#spinner", LoadingIndicator).display = busy
 
     @work(thread=True, exclusive=True, group="research", exit_on_error=False)
@@ -290,12 +315,12 @@ class ResearchTUI(App[None]):
             return
 
         self.query_one("#query", Input).value = ""
-        self.query_one("#status", Static).update("Ready for a research question.")
+        self.query_one("#status", Static).update("Desk ready. No active run.")
         self.query_one("#plan", Markdown).update(
-            "_The research plan will appear here._"
+            "_The research plan will be logged here._"
         )
         self.query_one("#report", Markdown).update(
-            "# Ready\n\nEnter a question above to start a research run."
+            "# Desk ready\n\nEnter a research brief to begin an evidence-led run."
         )
         self.query_one("#query", Input).focus()
 

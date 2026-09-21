@@ -1,0 +1,23 @@
+version: 1
+color:
+  archive_ink: "#0B1220"
+  deep_ink: "#101B2D"
+  raised_ink: "#15243A"
+  signal_cyan: "#45C7E8"
+  evidence_mint: "#72E0B8"
+  paper: "#F4F1E8"
+  white: "#FFFFFF"
+  slate: "#8EA0B8"
+  quiet_slate: "#60738D"
+  warning: "#F4BF75"
+  error: "#FF7A8A"
+typography:
+  primary: IBM Plex Sans
+  technical: IBM Plex Mono
+spacing:
+  base_unit: 4
+  scale: [4, 8, 12, 16, 24, 32, 48, 64]
+radius:
+  small: 4
+  medium: 8
+  large: 12

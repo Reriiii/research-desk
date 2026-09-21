@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="240" viewBox="0 0 920 240" role="img" aria-labelledby="title desc">
+  <title id="title">Research Desk</title>
+  <desc id="desc">Research paths converging into a sourced document beside the Research Desk wordmark.</desc>
+  <g transform="translate(20 36)">
+    <rect width="168" height="168" rx="28" fill="#0B1220"/>
+    <path d="M38 42h26c18 0 31 12 31 28s-13 28-31 28H38V42Z" fill="none" stroke="#F4F1E8" stroke-width="9" stroke-linejoin="round"/>
+    <path d="M69 98l37 35" fill="none" stroke="#F4F1E8" stroke-width="9" stroke-linecap="square"/>
+    <path d="M24 120h24L70 98M24 84h32M24 48h24l18 10" fill="none" stroke="#45C7E8" stroke-width="6" stroke-linecap="square" stroke-linejoin="miter"/>
+    <circle cx="24" cy="48" r="6" fill="#72E0B8"/>
+    <circle cx="24" cy="84" r="6" fill="#72E0B8"/>
+    <circle cx="24" cy="120" r="6" fill="#72E0B8"/>
+  </g>
+  <text x="228" y="123" fill="#0B1220" font-family="IBM Plex Sans, Inter, Arial, sans-serif" font-size="72" font-weight="600" letter-spacing="-2">Research Desk</text>
+  <text x="233" y="163" fill="#60738D" font-family="IBM Plex Mono, Consolas, monospace" font-size="20" font-weight="500" letter-spacing="4">EVIDENCE-LED AGENT</text>
+</svg>

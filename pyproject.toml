@@ -1,7 +1,7 @@
 [project]
 name = "langgraph-research-agent"
 version = "0.1.0"
-description = "Add your description here"
+description = "An evidence-led LangGraph research agent with bounded ReAct loops and observable runs"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [

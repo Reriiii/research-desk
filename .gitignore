@@ -13,3 +13,5 @@ wheels/
 # Runtime logs
 logs/
 agentops.log
+brand-system.zip
+graphify-out/
