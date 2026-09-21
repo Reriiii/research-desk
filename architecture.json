@@ -1,0 +1,207 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Kiến trúc LangGraph Research Agent",
+    "output": "architecture.html",
+    "quality_profile": "showcase",
+    "viewBox": [1180, 720]
+  },
+  "components": [
+    {
+      "id": "researcher-user",
+      "type": "external",
+      "label": "Người dùng",
+      "sublabel": "Câu hỏi nghiên cứu",
+      "pos": [35, 300],
+      "size": [135, 68]
+    },
+    {
+      "id": "access-surfaces",
+      "type": "frontend",
+      "label": "Điểm truy cập",
+      "sublabel": "Textual TUI / REST / CLI",
+      "tag": "sync + streaming",
+      "pos": [230, 295],
+      "size": [165, 78]
+    },
+    {
+      "id": "state-graph",
+      "type": "backend",
+      "label": "LangGraph Runtime",
+      "sublabel": "Compiled StateGraph",
+      "tag": "conditional routing",
+      "pos": [465, 295],
+      "size": [165, 78]
+    },
+    {
+      "id": "agent-pipeline",
+      "type": "backend",
+      "label": "Research Pipeline",
+      "sublabel": "Plan → Research → Evaluate → Write",
+      "tag": "retry-aware",
+      "pos": [700, 290],
+      "size": [190, 88]
+    },
+    {
+      "id": "research-report",
+      "type": "frontend",
+      "label": "Báo cáo cuối",
+      "sublabel": "Markdown + source URLs",
+      "pos": [955, 300],
+      "size": [165, 68]
+    },
+    {
+      "id": "agent-state",
+      "type": "database",
+      "label": "AgentState",
+      "sublabel": "plan, notes, counters, report",
+      "tag": "run_id correlated",
+      "pos": [465, 115],
+      "size": [165, 76]
+    },
+    {
+      "id": "openai-service",
+      "type": "external",
+      "label": "OpenAI",
+      "sublabel": "Planning + reasoning + writing",
+      "pos": [705, 490],
+      "size": [180, 72]
+    },
+    {
+      "id": "tavily-search",
+      "type": "external",
+      "label": "Tavily Search",
+      "sublabel": "Advanced web evidence",
+      "pos": [465, 490],
+      "size": [165, 72]
+    },
+    {
+      "id": "agentops-cloud",
+      "type": "cloud",
+      "label": "AgentOps",
+      "sublabel": "Trace replay + LLM spans",
+      "tag": "SUCCESS / ERROR",
+      "pos": [705, 105],
+      "size": [180, 82]
+    },
+    {
+      "id": "local-diagnostics",
+      "type": "database",
+      "label": "Rotating Logs",
+      "sublabel": "Latency, tokens, failures",
+      "tag": "logs/research-agent.log",
+      "pos": [230, 110],
+      "size": [165, 82]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Ứng dụng Python cục bộ",
+      "wraps": [
+        "access-surfaces",
+        "state-graph",
+        "agent-pipeline",
+        "research-report",
+        "agent-state",
+        "local-diagnostics"
+      ],
+      "pad": 28
+    }
+  ],
+  "connections": [
+    {
+      "id": "submit-query",
+      "from": "researcher-user",
+      "to": "access-surfaces",
+      "label": "gửi query",
+      "variant": "emphasis"
+    },
+    {
+      "id": "start-run",
+      "from": "access-surfaces",
+      "to": "state-graph",
+      "label": "invoke / stream",
+      "labelAt": [430, 387],
+      "variant": "emphasis"
+    },
+    {
+      "id": "dispatch-agents",
+      "from": "state-graph",
+      "to": "agent-pipeline",
+      "label": "điều phối node + state",
+      "labelAt": [750, 276],
+      "variant": "emphasis"
+    },
+    {
+      "id": "publish-report",
+      "from": "agent-pipeline",
+      "to": "research-report",
+      "label": "final_report",
+      "variant": "emphasis"
+    },
+    {
+      "id": "state-storage",
+      "from": "state-graph",
+      "to": "agent-state",
+      "label": "đọc / cập nhật",
+      "variant": "default"
+    },
+    {
+      "id": "llm-calls",
+      "from": "agent-pipeline",
+      "to": "openai-service",
+      "label": "Chat Completions",
+      "labelAt": [795, 392],
+      "variant": "default"
+    },
+    {
+      "id": "search-evidence",
+      "from": "agent-pipeline",
+      "to": "tavily-search",
+      "label": "web_search",
+      "variant": "dashed"
+    },
+    {
+      "id": "remote-traces",
+      "from": "state-graph",
+      "to": "agentops-cloud",
+      "label": "trace spans + usage",
+      "variant": "dashed"
+    },
+    {
+      "id": "local-events",
+      "from": "state-graph",
+      "to": "local-diagnostics",
+      "label": "run_id + diagnostics",
+      "variant": "dashed"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Luồng chính",
+      "items": [
+        "Lập kế hoạch 3–6 bước trước khi nghiên cứu",
+        "Thu thập evidence, đánh giá coverage, rồi viết báo cáo"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Giới hạn an toàn",
+      "items": [
+        "Tối đa 5 vòng tool cho mỗi research step",
+        "Tối đa 2 vòng bổ sung khi evidence chưa đủ"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Quan sát vận hành",
+      "items": [
+        "Một run_id xuyên suốt TUI, API, log và AgentOps",
+        "Theo dõi request ID, token usage, latency và stack trace"
+      ]
+    }
+  ]
+}

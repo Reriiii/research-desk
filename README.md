@@ -1,78 +1,227 @@
 # LangGraph Research Agent
 
-A multi-step research agent built with LangGraph, OpenAI, and Tavily. It plans a
-research task, gathers web evidence, evaluates coverage, retries missing areas,
-and writes a final report.
+Research agent đa bước xây dựng bằng LangGraph, OpenAI và Tavily. Agent tự lập
+kế hoạch, tìm kiếm bằng chứng trên web, đánh giá độ đầy đủ, bổ sung phần còn
+thiếu và tạo báo cáo Markdown có nguồn tham khảo.
 
-## Setup
+## Điểm nổi bật
 
-Requires Python 3.12+ and [uv](https://docs.astral.sh/uv/).
+- Lập kế hoạch nghiên cứu có cấu trúc gồm 3–6 bước.
+- Thu thập bằng chứng web qua Tavily và giữ lại source URL.
+- Đánh giá coverage trước khi viết báo cáo cuối.
+- Tự nghiên cứu bổ sung tối đa 2 lần khi evidence chưa đủ.
+- Giới hạn tối đa 5 vòng gọi tool cho mỗi bước để tránh loop vô hạn.
+- Ba cách sử dụng: Textual TUI, FastAPI REST API và CLI.
+- Correlation bằng `run_id` xuyên suốt state, log, API và AgentOps.
+- Theo dõi OpenAI request ID, token usage, latency và stack trace.
+
+## Kiến trúc
+
+[![LangGraph Research Agent architecture](./architecture.visual-check.1440x900.light.png)](./architecture.html)
+
+- [Mở architecture viewer tương tác](./architecture.html)
+- [Xem JSON specification](./architecture.json)
+
+Luồng chính:
+
+```text
+User → TUI / REST / CLI → LangGraph → Research Pipeline → Final Report
+                                      ├── OpenAI
+                                      ├── Tavily Search
+                                      ├── AgentOps traces
+                                      └── Rotating local logs
+```
+
+Nội dung sơ đồ được viết bằng tiếng Việt. Viewer controls cố định và thuộc tính
+`html lang` dùng English fallback vì Archify hiện chưa hỗ trợ locale tiếng Việt.
+
+## Quy trình agent
+
+1. `planner` chuyển câu hỏi thành 3–6 research steps.
+2. `researcher` xử lý từng bước và quyết định khi nào cần `web_search`.
+3. `tools` gọi Tavily và đưa evidence trở lại conversation state.
+4. `save_research` lưu note, xóa scratchpad và chuyển sang bước tiếp theo.
+5. `evaluator` kiểm tra độ đầy đủ của evidence.
+6. `retry_planner` tạo bước bổ sung nếu còn thiếu thông tin.
+7. `writer` tổng hợp báo cáo cuối chỉ từ evidence đã thu thập.
+
+## Yêu cầu
+
+- Python 3.12+
+- [uv](https://docs.astral.sh/uv/)
+- OpenAI API key
+- Tavily API key
+- AgentOps API key nếu muốn remote tracing
+
+## Cài đặt
 
 ```powershell
+git clone https://github.com/Reriiii/langgraph-research-agent.git
+Set-Location langgraph-research-agent
 uv sync --frozen
 Copy-Item .env.example .env
 ```
 
-Configure `MODEL`, `OPENAI_API_KEY`, `TAVILY_API_KEY`, and
-`AGENTOPS_API_KEY` in `.env`.
+Cấu hình `.env`:
 
-## Run
+```dotenv
+MODEL=gpt-5-mini
+OPENAI_API_KEY=your-openai-api-key
+TAVILY_API_KEY=your-tavily-api-key
+AGENTOPS_API_KEY=your-agentops-api-key
+LOG_LEVEL=INFO
+```
 
-Start the interactive terminal UI:
+| Biến | Bắt buộc | Mục đích |
+|---|---:|---|
+| `MODEL` | Có | OpenAI model dùng cho planner, researcher, evaluator và writer |
+| `OPENAI_API_KEY` | Có | Xác thực OpenAI API |
+| `TAVILY_API_KEY` | Có | Web search cho evidence bên ngoài |
+| `AGENTOPS_API_KEY` | Không | Trace replay và LLM spans trên AgentOps |
+| `OPENAI_PROJECT` | Không | Chọn rõ OpenAI project để đối chiếu usage |
+| `LOG_LEVEL` | Không | Mức log; mặc định `INFO` |
+
+Không commit `.env` hoặc API key vào repository.
+
+## Chạy TUI
 
 ```powershell
 uv run python tui.py
 ```
 
-Enter a research question and press `Enter` or select **Research**. Use
-`Ctrl+F` to focus the query, `Ctrl+K` to clear the current result, and `Ctrl+Q`
-to quit.
+Nhập câu hỏi rồi nhấn `Enter` hoặc chọn **Research**.
 
-Run the example query:
+| Phím tắt | Chức năng |
+|---|---|
+| `Enter` | Bắt đầu research |
+| `Ctrl+F` | Focus ô nhập câu hỏi |
+| `Ctrl+K` | Xóa kết quả hiện tại |
+| `Ctrl+Q` | Thoát TUI |
 
-```powershell
-uv run python run.py
+Ví dụ prompt:
+
+```text
+What are the three main benefits of solar energy? Use reliable sources and include URLs.
 ```
 
-Start the HTTP API:
+## Chạy REST API
 
 ```powershell
 uv run python main.py
 ```
 
-Then send `POST /research` with a JSON body such as:
+Sau khi server khởi động:
 
-```json
-{"query": "What are the major research directions in AI agents today?"}
+- Swagger UI: <http://127.0.0.1:8000/docs>
+- Health check: <http://127.0.0.1:8000/health>
+- Research endpoint: `POST /research`
+
+Ví dụ request:
+
+```powershell
+$body = @{
+    query = "What are the three main benefits of solar energy? Use reliable sources."
+} | ConvertTo-Json
+
+Invoke-RestMethod `
+    -Method Post `
+    -Uri "http://127.0.0.1:8000/research" `
+    -ContentType "application/json" `
+    -Body $body
 ```
 
-Check service availability with `GET /health`.
+Response:
 
-## Diagnostics
+```json
+{
+  "run_id": "a1b2c3d4e5f6",
+  "final_report": "# Research report...",
+  "research_complete": true,
+  "evaluation": "Reason: ..."
+}
+```
 
-Detailed progress is written to `logs/research-agent.log`. Every research run
-has a `run_id`; use it to filter planner, researcher, Tavily, evaluator, and
-writer events belonging to one request. Model response entries include latency,
-OpenAI request ID, resolved model name, and token usage. Set `LOG_LEVEL=DEBUG`
-in `.env` for additional diagnostics.
+## Chạy CLI mẫu
 
-If OpenAI usage is not visible in the dashboard, match the dashboard project to
-the project owning the API key or set `OPENAI_PROJECT=proj_...` explicitly.
+```powershell
+uv run python run.py
+```
 
-AgentOps is initialized by `main.py`, `tui.py`, and `run.py`. Each research run
-is sent as a separate `research-agent` trace tagged with the local `run_id` and
-its source (`api`, `tui`, or `cli`).
+Query mẫu hiện được khai báo trong `run.py`.
 
-Live PowerShell view:
+## Observability
+
+### Local logs
+
+Ứng dụng ghi rotating log vào `logs/research-agent.log`. Mỗi entry chứa
+`run_id` và có thể bao gồm node, latency, OpenAI request ID, model thực tế,
+token usage, tool call và stack trace.
+
+Theo dõi realtime bằng PowerShell:
 
 ```powershell
 Get-Content .\logs\research-agent.log -Wait
 ```
 
-## Test
+Lọc một run cụ thể:
 
-Tests use only the standard library and mock all external services:
+```powershell
+Select-String -Path .\logs\research-agent.log -Pattern "run_id=a1b2c3d4e5f6"
+```
+
+Log file xoay vòng ở 5 MB và giữ tối đa 3 bản cũ.
+
+### AgentOps
+
+Khi `AGENTOPS_API_KEY` tồn tại, mỗi lần chạy được gửi thành một trace
+`research-agent` riêng, gắn tag `run_id` và nguồn gọi `tui`, `api` hoặc `cli`.
+Dashboard URL được ghi trong local log dưới event `agentops_trace_started`.
+
+AgentOps được dùng cho tracing, latency, token/cost visibility và replay. Các
+quality evaluation định lượng như correctness, faithfulness hoặc regression
+threshold nên được triển khai thêm bằng một eval framework chuyên dụng.
+
+## Kiểm thử
+
+Test suite mock toàn bộ OpenAI, Tavily và AgentOps; chạy test không phát sinh
+request hoặc chi phí external API.
 
 ```powershell
 uv run python -m unittest discover -v
 ```
+
+Kiểm tra compile:
+
+```powershell
+uv run python -m compileall -q app main.py run.py tui.py tests
+```
+
+## Cấu trúc project
+
+```text
+.
+├── app/
+│   ├── agents/          # Planner, researcher, evaluator, retry, writer
+│   ├── api/             # FastAPI request/response routes
+│   ├── graph/           # AgentState và LangGraph topology
+│   ├── tools/           # Tavily web search tool
+│   ├── logging_config.py
+│   ├── observability.py # AgentOps initialization và trace lifecycle
+│   ├── main.py          # FastAPI application
+│   └── tui.py           # Textual application
+├── tests/               # Unit, graph, API, TUI và observability tests
+├── architecture.html    # Interactive architecture viewer
+├── architecture.json    # Archify source specification
+├── main.py              # API entrypoint
+├── tui.py               # TUI entrypoint
+└── run.py               # CLI example
+```
+
+## Lưu ý vận hành
+
+- Một full research run có thể thực hiện nhiều OpenAI và Tavily requests.
+- Theo dõi token usage và latency bằng local log hoặc AgentOps trước khi chạy
+  workload lớn.
+- Không đưa nội dung bí mật vào query vì query preview và trace metadata có thể
+  được ghi phục vụ debugging.
+- AgentOps là optional; nếu thiếu key, workflow vẫn chạy với local logging.
