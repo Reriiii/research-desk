@@ -1,9 +1,9 @@
 from langgraph.graph import END, START, StateGraph
 
 from app.agents.planner import planner_node
-from app.agents.researcher import (
-    researcher_node,
-    researcher_router,
+from app.agents.react import (
+    react_node,
+    react_router,
 )
 from app.agents.tool_executor import tool_node
 from app.agents.save_research import (
@@ -33,12 +33,12 @@ builder.add_node(
 )
 
 builder.add_node(
-    "researcher",
-    researcher_node,
+    "react_agent",
+    react_node,
 )
 
 builder.add_node(
-    "tools",
+    "act",
     tool_node,
 )
 
@@ -74,29 +74,29 @@ builder.add_edge(
 
 builder.add_edge(
     "planner",
-    "researcher",
+    "react_agent",
 )
 
 
-# researcher:
+# ReAct agent:
 #
-# tool call -> tools
-# finished  -> save
+# action requested -> act/observe -> ReAct agent
+# evidence ready   -> save
 #
 builder.add_conditional_edges(
-    "researcher",
-    researcher_router,
+    "react_agent",
+    react_router,
     {
-        "tools": "tools",
+        "act": "act",
         "save_research": "save_research",
     },
 )
 
 
-# tool observation returns to agent
+# The tool result becomes an observation for the next ReAct iteration.
 builder.add_edge(
-    "tools",
-    "researcher",
+    "act",
+    "react_agent",
 )
 
 
@@ -105,7 +105,7 @@ builder.add_conditional_edges(
     "save_research",
     step_router,
     {
-        "researcher": "researcher",
+        "react_agent": "react_agent",
         "evaluator": "evaluator",
     },
 )
@@ -124,7 +124,7 @@ builder.add_conditional_edges(
 
 builder.add_edge(
     "retry_planner",
-    "researcher",
+    "react_agent",
 )
 
 

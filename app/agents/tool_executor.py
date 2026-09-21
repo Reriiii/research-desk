@@ -10,7 +10,7 @@ from app.tools.search import web_search
 TOOLS = {
     web_search.name: web_search,
 }
-logger = get_logger("agents.tools")
+logger = get_logger("agents.react_action")
 
 
 def tool_node(state: AgentState):
@@ -19,10 +19,10 @@ def tool_node(state: AgentState):
 
     results = []
     logger.info(
-        "run_id=%s event=node_start node=tools calls=%d round=%d",
+        "run_id=%s event=node_start node=react_action calls=%d iteration=%d",
         run_id,
         len(last_message.tool_calls),
-        state.get("tool_call_count", 0) + 1,
+        state.get("react_iteration", 0) + 1,
     )
 
     for tool_call in last_message.tool_calls:
@@ -72,12 +72,12 @@ def tool_node(state: AgentState):
         )
 
     logger.info(
-        "run_id=%s event=node_complete node=tools results=%d errors=%d",
+        "run_id=%s event=node_complete node=react_action observations=%d errors=%d",
         run_id,
         len(results),
         sum(message.status == "error" for message in results),
     )
     return {
         "messages": results,
-        "tool_call_count": state.get("tool_call_count", 0) + 1,
+        "react_iteration": state.get("react_iteration", 0) + 1,
     }

@@ -1,12 +1,13 @@
 # LangGraph Research Agent
 
 Research agent đa bước xây dựng bằng LangGraph, OpenAI và Tavily. Agent tự lập
-kế hoạch, tìm kiếm bằng chứng trên web, đánh giá độ đầy đủ, bổ sung phần còn
-thiếu và tạo báo cáo Markdown có nguồn tham khảo.
+kế hoạch, dùng vòng lặp ReAct để tìm kiếm và quan sát bằng chứng, đánh giá độ
+đầy đủ, bổ sung phần còn thiếu và tạo báo cáo Markdown có nguồn tham khảo.
 
 ## Điểm nổi bật
 
 - Lập kế hoạch nghiên cứu có cấu trúc gồm 3–6 bước.
+- ReAct loop rõ ràng: Reason → Act (`web_search`) → Observe (`ToolMessage`).
 - Thu thập bằng chứng web qua Tavily và giữ lại source URL.
 - Đánh giá coverage trước khi viết báo cáo cuối.
 - Tự nghiên cứu bổ sung tối đa 2 lần khi evidence chưa đủ.
@@ -25,25 +26,27 @@ thiếu và tạo báo cáo Markdown có nguồn tham khảo.
 Luồng chính:
 
 ```text
-User → TUI / REST / CLI → LangGraph → Research Pipeline → Final Report
-                                      ├── OpenAI
-                                      ├── Tavily Search
-                                      ├── AgentOps traces
-                                      └── Rotating local logs
+User → TUI / REST / CLI → Planner → ReAct Research Loop → Evaluator → Writer
+                                      ├── OpenAI reasoning
+                                      ├── Tavily action
+                                      └── ToolMessage observation
 ```
 
-Nội dung sơ đồ được viết bằng tiếng Việt. Viewer controls cố định và thuộc tính
-`html lang` dùng English fallback vì Archify hiện chưa hỗ trợ locale tiếng Việt.
+Sơ đồ và viewer controls sử dụng English để thuận tiện chia sẻ trong tài liệu
+kỹ thuật và repository công khai.
 
 ## Quy trình agent
 
 1. `planner` chuyển câu hỏi thành 3–6 research steps.
-2. `researcher` xử lý từng bước và quyết định khi nào cần `web_search`.
-3. `tools` gọi Tavily và đưa evidence trở lại conversation state.
-4. `save_research` lưu note, xóa scratchpad và chuyển sang bước tiếp theo.
-5. `evaluator` kiểm tra độ đầy đủ của evidence.
-6. `retry_planner` tạo bước bổ sung nếu còn thiếu thông tin.
+2. `react_agent` reasoning nội bộ để xác định evidence còn thiếu.
+3. Khi cần hành động, model phát tool call và node `act` gọi `web_search`.
+4. Kết quả được đưa về dưới dạng `ToolMessage` để model Observe và lặp lại.
+5. Khi đủ evidence, `save_research` lưu note và chuyển sang bước tiếp theo.
+6. `evaluator` kiểm tra độ đầy đủ; `retry_planner` tạo bước bổ sung nếu cần.
 7. `writer` tổng hợp báo cáo cuối chỉ từ evidence đã thu thập.
+
+ReAct reasoning không được xuất ra dưới dạng chain-of-thought. Agent chỉ trả về
+kết luận, evidence và source URL; phần reasoning riêng tư vẫn nằm trong model.
 
 ## Yêu cầu
 
@@ -74,7 +77,7 @@ LOG_LEVEL=INFO
 
 | Biến | Bắt buộc | Mục đích |
 |---|---:|---|
-| `MODEL` | Có | OpenAI model dùng cho planner, researcher, evaluator và writer |
+| `MODEL` | Có | OpenAI model dùng cho planner, ReAct agent, evaluator và writer |
 | `OPENAI_API_KEY` | Có | Xác thực OpenAI API |
 | `TAVILY_API_KEY` | Có | Web search cho evidence bên ngoài |
 | `AGENTOPS_API_KEY` | Không | Trace replay và LLM spans trên AgentOps |
@@ -201,7 +204,7 @@ uv run python -m compileall -q app main.py run.py tui.py tests
 ```text
 .
 ├── app/
-│   ├── agents/          # Planner, researcher, evaluator, retry, writer
+│   ├── agents/          # Planner, ReAct loop, evaluator, retry, writer
 │   ├── api/             # FastAPI request/response routes
 │   ├── graph/           # AgentState và LangGraph topology
 │   ├── tools/           # Tavily web search tool

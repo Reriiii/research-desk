@@ -24,8 +24,8 @@ logger = get_logger("tui")
 
 NODE_STATUS = {
     "planner": "Research plan ready",
-    "researcher": "Analyzing the current research step",
-    "tools": "Searching for evidence",
+    "react_agent": "ReAct: reasoning about the next action",
+    "act": "ReAct: acting and observing tool evidence",
     "save_research": "Evidence saved",
     "evaluator": "Evaluating research coverage",
     "retry_planner": "Planning follow-up research",

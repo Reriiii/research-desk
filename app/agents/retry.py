@@ -30,6 +30,6 @@ Investigate the missing information identified by the evaluator:
         ],
         "current_step": 0,
         "retry_count": state["retry_count"] + 1,
-        "tool_call_count": 0,
+        "react_iteration": 0,
         "messages": [RemoveMessage(id=REMOVE_ALL_MESSAGES)],
     }

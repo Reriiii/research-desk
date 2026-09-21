@@ -25,14 +25,14 @@ def save_research_node(state: AgentState):
     return {
         "research_notes": [*state["research_notes"], note],
         "current_step": state["current_step"] + 1,
-        "tool_call_count": 0,
+        "react_iteration": 0,
         "messages": [RemoveMessage(id=REMOVE_ALL_MESSAGES)],
     }
 
 
 def step_router(
     state: AgentState,
-) -> Literal["researcher", "evaluator"]:
+) -> Literal["react_agent", "evaluator"]:
     if state["current_step"] < len(state["plan"]):
-        return "researcher"
+        return "react_agent"
     return "evaluator"

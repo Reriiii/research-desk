@@ -30,7 +30,7 @@ class AgentState(TypedDict):
 
     # Control infinite loops
     retry_count: int
-    tool_call_count: int
+    react_iteration: int
 
     # Final output
     final_report: str | None
@@ -47,6 +47,6 @@ def create_initial_state(query: str) -> AgentState:
         "evaluation": None,
         "research_complete": False,
         "retry_count": 0,
-        "tool_call_count": 0,
+        "react_iteration": 0,
         "final_report": None,
     }

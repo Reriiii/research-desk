@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from fastapi.testclient import TestClient
 from langchain_core.messages import AIMessage, HumanMessage, RemoveMessage
@@ -8,7 +8,7 @@ from pydantic import ValidationError
 
 from app.agents.evaluator import Evaluation, evaluation_router
 from app.agents.planner import ResearchPlan
-from app.agents.researcher import MAX_TOOL_ROUNDS, researcher_node
+from app.agents.react import MAX_REACT_ITERATIONS, react_node, react_router
 from app.agents.save_research import save_research_node
 from app.agents.tool_executor import tool_node
 from app.graph.state import create_initial_state
@@ -22,19 +22,29 @@ class GraphTests(unittest.TestCase):
 
     @patch("app.agents.writer._get_writer_model")
     @patch("app.agents.evaluator._get_evaluation_model")
-    @patch("app.agents.researcher._get_research_model")
+    @patch("app.agents.react._get_react_model")
     @patch("app.agents.planner._get_planner_model")
     def test_graph_runs_end_to_end_without_external_calls(
         self,
         get_planner_model,
-        get_research_model,
+        get_react_model,
         get_evaluation_model,
         get_writer_model,
     ):
         get_planner_model.return_value.invoke.return_value = ResearchPlan(
             steps=["step one", "step two", "step three"]
         )
-        get_research_model.return_value.invoke.side_effect = [
+        get_react_model.return_value.invoke.side_effect = [
+            AIMessage(
+                content="",
+                tool_calls=[
+                    {
+                        "name": "web_search",
+                        "args": {"query": "step one evidence"},
+                        "id": "call-1",
+                    }
+                ],
+            ),
             AIMessage(content="note one"),
             AIMessage(content="note two"),
             AIMessage(content="note three"),
@@ -47,7 +57,14 @@ class GraphTests(unittest.TestCase):
             content="final report"
         )
 
-        result = graph.invoke(create_initial_state("query"))
+        search_tool = Mock()
+        search_tool.invoke.return_value = "observed evidence"
+        with patch.dict(
+            "app.agents.tool_executor.TOOLS",
+            {"web_search": search_tool},
+            clear=True,
+        ):
+            result = graph.invoke(create_initial_state("query"))
 
         self.assertEqual(
             result["research_notes"],
@@ -55,12 +72,14 @@ class GraphTests(unittest.TestCase):
         )
         self.assertEqual(result["final_report"], "final report")
         self.assertTrue(result["research_complete"])
+        self.assertEqual(result["react_iteration"], 0)
+        search_tool.invoke.assert_called_once_with({"query": "step one evidence"})
 
     def test_initial_state_contains_all_control_fields(self):
         state = create_initial_state("query")
 
         self.assertEqual(state["query"], "query")
-        self.assertEqual(state["tool_call_count"], 0)
+        self.assertEqual(state["react_iteration"], 0)
         self.assertEqual(state["retry_count"], 0)
 
     def test_plan_requires_three_to_six_steps(self):
@@ -69,8 +88,8 @@ class GraphTests(unittest.TestCase):
         with self.assertRaises(ValidationError):
             ResearchPlan(steps=[str(index) for index in range(7)])
 
-    @patch("app.agents.researcher._get_research_model")
-    def test_researcher_persists_request_for_tool_followup(self, get_model):
+    @patch("app.agents.react._get_react_model")
+    def test_react_agent_persists_request_for_observation_loop(self, get_model):
         response = AIMessage(
             content="",
             tool_calls=[{"name": "web_search", "args": {"query": "q"}, "id": "1"}],
@@ -79,12 +98,14 @@ class GraphTests(unittest.TestCase):
         state = create_initial_state("overall question")
         state["plan"] = ["first step"]
 
-        update = researcher_node(state)
+        update = react_node(state)
 
         self.assertIsInstance(update["messages"][0], HumanMessage)
         self.assertIn("overall question", update["messages"][0].text)
         self.assertIn("first step", update["messages"][0].text)
         self.assertIs(update["messages"][1], response)
+        state["messages"] = update["messages"]
+        self.assertEqual(react_router(state), "act")
 
     def test_save_research_clears_messages(self):
         state = create_initial_state("query")
@@ -111,22 +132,22 @@ class GraphTests(unittest.TestCase):
 
         self.assertEqual(update["messages"][0].status, "error")
         self.assertIn("missing", update["messages"][0].text)
-        self.assertEqual(update["tool_call_count"], 1)
+        self.assertEqual(update["react_iteration"], 1)
 
-    @patch("app.agents.researcher._get_research_model")
-    @patch("app.agents.researcher._get_model")
-    def test_tool_limit_forces_a_final_answer(self, get_model, get_research_model):
+    @patch("app.agents.react._get_react_model")
+    @patch("app.agents.react._get_model")
+    def test_react_limit_forces_a_final_answer(self, get_model, get_react_model):
         get_model.return_value.invoke.return_value = AIMessage(content="final note")
         state = create_initial_state("query")
         state["plan"] = ["step"]
         state["messages"] = [HumanMessage(content="request")]
-        state["tool_call_count"] = MAX_TOOL_ROUNDS
+        state["react_iteration"] = MAX_REACT_ITERATIONS
 
-        update = researcher_node(state)
+        update = react_node(state)
 
         self.assertEqual(update["messages"][-1].text, "final note")
         get_model.return_value.invoke.assert_called_once()
-        get_research_model.assert_not_called()
+        get_react_model.assert_not_called()
 
     def test_evaluation_stops_after_retry_limit(self):
         state = create_initial_state("query")

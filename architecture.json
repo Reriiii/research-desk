@@ -2,7 +2,8 @@
   "schema_version": 1,
   "diagram_type": "architecture",
   "meta": {
-    "title": "Kiến trúc LangGraph Research Agent",
+    "title": "LangGraph Research Agent Architecture",
+    "locale": "en",
     "output": "architecture.html",
     "quality_profile": "showcase",
     "viewBox": [1180, 720]
@@ -11,15 +12,15 @@
     {
       "id": "researcher-user",
       "type": "external",
-      "label": "Người dùng",
-      "sublabel": "Câu hỏi nghiên cứu",
+      "label": "User",
+      "sublabel": "Research question",
       "pos": [35, 300],
       "size": [135, 68]
     },
     {
       "id": "access-surfaces",
       "type": "frontend",
-      "label": "Điểm truy cập",
+      "label": "Entry Points",
       "sublabel": "Textual TUI / REST / CLI",
       "tag": "sync + streaming",
       "pos": [230, 295],
@@ -37,16 +38,16 @@
     {
       "id": "agent-pipeline",
       "type": "backend",
-      "label": "Research Pipeline",
-      "sublabel": "Plan → Research → Evaluate → Write",
-      "tag": "retry-aware",
+      "label": "ReAct Research Loop",
+      "sublabel": "Reason → Act → Observe",
+      "tag": "max 5 iterations",
       "pos": [700, 290],
       "size": [190, 88]
     },
     {
       "id": "research-report",
       "type": "frontend",
-      "label": "Báo cáo cuối",
+      "label": "Final Report",
       "sublabel": "Markdown + source URLs",
       "pos": [955, 300],
       "size": [165, 68]
@@ -55,7 +56,7 @@
       "id": "agent-state",
       "type": "database",
       "label": "AgentState",
-      "sublabel": "plan, notes, counters, report",
+      "sublabel": "plan, notes, ReAct count, report",
       "tag": "run_id correlated",
       "pos": [465, 115],
       "size": [165, 76]
@@ -64,7 +65,7 @@
       "id": "openai-service",
       "type": "external",
       "label": "OpenAI",
-      "sublabel": "Planning + reasoning + writing",
+      "sublabel": "Reasoning + evaluation + writing",
       "pos": [705, 490],
       "size": [180, 72]
     },
@@ -98,7 +99,7 @@
   "boundaries": [
     {
       "kind": "region",
-      "label": "Ứng dụng Python cục bộ",
+      "label": "Local Python Application",
       "wraps": [
         "access-surfaces",
         "state-graph",
@@ -115,7 +116,8 @@
       "id": "submit-query",
       "from": "researcher-user",
       "to": "access-surfaces",
-      "label": "gửi query",
+      "label": "submit query",
+      "labelAt": [200, 387],
       "variant": "emphasis"
     },
     {
@@ -130,7 +132,7 @@
       "id": "dispatch-agents",
       "from": "state-graph",
       "to": "agent-pipeline",
-      "label": "điều phối node + state",
+      "label": "dispatch research step",
       "labelAt": [750, 276],
       "variant": "emphasis"
     },
@@ -145,7 +147,7 @@
       "id": "state-storage",
       "from": "state-graph",
       "to": "agent-state",
-      "label": "đọc / cập nhật",
+      "label": "read / update",
       "variant": "default"
     },
     {
@@ -160,7 +162,7 @@
       "id": "search-evidence",
       "from": "agent-pipeline",
       "to": "tavily-search",
-      "label": "web_search",
+      "label": "Act / Observe",
       "variant": "dashed"
     },
     {
@@ -181,26 +183,26 @@
   "cards": [
     {
       "dot": "cyan",
-      "title": "Luồng chính",
+      "title": "Main Flow",
       "items": [
-        "Lập kế hoạch 3–6 bước trước khi nghiên cứu",
-        "Thu thập evidence, đánh giá coverage, rồi viết báo cáo"
+        "Plan 3–6 focused steps before research begins",
+        "Run Reason → Act → Observe for every research step"
       ]
     },
     {
       "dot": "amber",
-      "title": "Giới hạn an toàn",
+      "title": "Safety Limits",
       "items": [
-        "Tối đa 5 vòng tool cho mỗi research step",
-        "Tối đa 2 vòng bổ sung khi evidence chưa đủ"
+        "Allow at most 5 ReAct iterations per research step",
+        "Allow at most 2 follow-up rounds for missing evidence"
       ]
     },
     {
       "dot": "emerald",
-      "title": "Quan sát vận hành",
+      "title": "Operational Observability",
       "items": [
-        "Một run_id xuyên suốt TUI, API, log và AgentOps",
-        "Theo dõi request ID, token usage, latency và stack trace"
+        "Carry one run_id across TUI, API, logs, and AgentOps",
+        "Track request IDs, token usage, latency, and stack traces"
       ]
     }
   ]
