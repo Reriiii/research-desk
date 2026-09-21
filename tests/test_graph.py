@@ -155,6 +155,7 @@ class ApiTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["final_report"], "report")
+        self.assertTrue(response.json()["run_id"])
 
     def test_health_endpoint(self):
         response = TestClient(app).get("/health")

@@ -4,6 +4,10 @@ from langchain_core.messages import RemoveMessage
 from langgraph.graph.message import REMOVE_ALL_MESSAGES
 
 from app.graph.state import AgentState
+from app.logging_config import get_logger
+
+
+logger = get_logger("agents.save_research")
 
 
 def save_research_node(state: AgentState):
@@ -11,6 +15,12 @@ def save_research_node(state: AgentState):
         raise RuntimeError("No research message to save")
 
     note = state["messages"][-1].text
+    logger.info(
+        "run_id=%s event=node_complete node=save_research step=%d note_chars=%d",
+        state["run_id"],
+        state["current_step"] + 1,
+        len(note),
+    )
 
     return {
         "research_notes": [*state["research_notes"], note],

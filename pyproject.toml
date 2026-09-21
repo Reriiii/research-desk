@@ -12,5 +12,6 @@ dependencies = [
     "pydantic>=2.13.5",
     "python-dotenv>=1.2.3",
     "tavily-python>=0.8.4",
+    "textual>=6.1.0",
     "uvicorn>=0.53.0",
 ]

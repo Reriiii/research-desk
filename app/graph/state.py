@@ -1,10 +1,14 @@
 from typing import Annotated, TypedDict
+from uuid import uuid4
 
 from langchain_core.messages import BaseMessage
 from langgraph.graph.message import add_messages
 
 
 class AgentState(TypedDict):
+    # Correlation ID used in diagnostics
+    run_id: str
+
     # Conversation history
     messages: Annotated[list[BaseMessage], add_messages]
 
@@ -34,6 +38,7 @@ class AgentState(TypedDict):
 
 def create_initial_state(query: str) -> AgentState:
     return {
+        "run_id": uuid4().hex[:12],
         "messages": [],
         "query": query,
         "plan": [],
