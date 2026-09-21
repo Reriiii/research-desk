@@ -1,10 +1,13 @@
-from app.graph.workflow import graph
-from app.graph.state import create_initial_state
 from app.logging_config import LOG_FILE, configure_logging, get_logger
+from app.observability import agentops_trace, init_agentops
 
 
 configure_logging(console=True)
 logger = get_logger("cli")
+init_agentops()
+
+from app.graph.state import create_initial_state
+from app.graph.workflow import graph
 
 
 def main() -> None:
@@ -17,7 +20,8 @@ def main() -> None:
         initial_state["run_id"],
         LOG_FILE,
     )
-    result = graph.invoke(initial_state)
+    with agentops_trace(initial_state["run_id"], "cli"):
+        result = graph.invoke(initial_state)
 
     print(f"Run ID: {initial_state['run_id']}")
     print(f"Log file: {LOG_FILE}")

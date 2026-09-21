@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 from app.graph.state import create_initial_state
 from app.graph.workflow import graph
 from app.logging_config import get_logger, preview
+from app.observability import agentops_trace
 
 
 router = APIRouter()
@@ -34,7 +35,8 @@ def research(request: ResearchRequest) -> ResearchResponse:
     )
     started = perf_counter()
     try:
-        result = graph.invoke(state)
+        with agentops_trace(run_id, "api"):
+            result = graph.invoke(state)
     except Exception:
         logger.exception(
             "run_id=%s event=api_request_failed endpoint=/research duration_ms=%.1f",

@@ -13,7 +13,8 @@ uv sync --frozen
 Copy-Item .env.example .env
 ```
 
-Configure `MODEL`, `OPENAI_API_KEY`, and `TAVILY_API_KEY` in `.env`.
+Configure `MODEL`, `OPENAI_API_KEY`, `TAVILY_API_KEY`, and
+`AGENTOPS_API_KEY` in `.env`.
 
 ## Run
 
@@ -57,6 +58,10 @@ in `.env` for additional diagnostics.
 
 If OpenAI usage is not visible in the dashboard, match the dashboard project to
 the project owning the API key or set `OPENAI_PROJECT=proj_...` explicitly.
+
+AgentOps is initialized by `main.py`, `tui.py`, and `run.py`. Each research run
+is sent as a separate `research-agent` trace tagged with the local `run_id` and
+its source (`api`, `tui`, or `cli`).
 
 Live PowerShell view:
 

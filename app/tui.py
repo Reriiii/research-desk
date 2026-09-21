@@ -16,6 +16,7 @@ from textual.widgets import (
 from app.graph.state import AgentState, create_initial_state
 from app.graph.workflow import graph
 from app.logging_config import LOG_FILE, get_logger, preview
+from app.observability import agentops_trace
 
 
 logger = get_logger("tui")
@@ -220,17 +221,18 @@ class ResearchTUI(App[None]):
     def run_research(self, state: AgentState) -> None:
         run_id = state["run_id"]
         try:
-            for chunk in graph.stream(
-                state,
-                stream_mode="updates",
-            ):
-                for node_name, update in chunk.items():
-                    self.call_from_thread(
-                        self._apply_graph_update,
-                        node_name,
-                        update,
-                        run_id,
-                    )
+            with agentops_trace(run_id, "tui"):
+                for chunk in graph.stream(
+                    state,
+                    stream_mode="updates",
+                ):
+                    for node_name, update in chunk.items():
+                        self.call_from_thread(
+                            self._apply_graph_update,
+                            node_name,
+                            update,
+                            run_id,
+                        )
         except Exception as exc:
             logger.exception("run_id=%s event=tui_run_failed", run_id)
             self.call_from_thread(self._show_error, str(exc), run_id)
